@@ -176,6 +176,23 @@ macro_rules! timer {
                     }
                 }
             }
+            impl<UXX: core::convert::Into<u32>> embedded_hal::blocking::delay::DelayUs<UXX> for $TIMERX {
+                //type Error = Infallible;
+
+                fn delay_us(&mut self, us: UXX) -> () {
+                    let value: u32 = self.sys_clk / 1_000_000 * us.into();
+                    unsafe {
+                        self.registers.en.write(|w| w.bits(0));
+                        self.registers.reload.write(|w| w.bits(0));
+                        self.registers.load.write(|w| w.bits(value));
+                        self.registers.en.write(|w| w.bits(1));
+                        self.registers.update_value.write(|w| w.bits(1));
+                        while self.registers.value.read().bits() > 0 {
+                            self.registers.update_value.write(|w| w.bits(1));
+                        }
+                    }
+                }
+            }
         )+
     }
 }
